@@ -4,14 +4,9 @@ import CurrentWeather from "../src/components/current-weather/CurrentWeather";
 import Forecast from "../src/components/forecast/Forecast";
 import { WEATHER_API_URL, WEATHER_API_KEY } from "./api";
 import "./App.css";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionItemButton,
-  AccordionItemHeading,
-  AccordionItemPanel
-} from 'react-accessible-accordion';
+import { Accordion, AccordionItem, AccordionItemButton, AccordionItemHeading, AccordionItemPanel } from 'react-accessible-accordion';
 import NewsGrid from "./components/News/NewsGrid";
+
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -22,19 +17,18 @@ function App() {
 
   const [currentWeather, setCurrentWeather] = useState(null);
   const [currentForecast, setCurrentForecast] = useState(null);
+  const [currentCity, setCurrentCity] = useState();
   const [searchedWeather, setSearchedWeather] = useState();
   const [searchedForecast, setSearchedForecast] = useState();
-  const [items, setItems] = useState([]);
-  const [active, setActive] = useState(1);
-  const [category, setCategory] = useState('general');
-  // const [lati, setLati] = useState();
-  // const [long, setLong] = useState();
-  // const [localData, setLocalData] = useState();
-  // const [loData, setLocalData] = useState();
+  const [searchedCity, setSearchedCity] = useState();
+  const [news, setNews] = useState([]);
+  const [searchedNews, setSearchedNews] = useState();
+  const [show, setShow] = useState(false)
 
 
   // Handles search functionality
   const handleOnSearchChange = (searchData) => {
+
     const [lat, lon] = searchData.value.split(" ");
 
     const currentWeatherFetch = fetch(
@@ -43,7 +37,6 @@ function App() {
     const forecastFetch = fetch(
       `${WEATHER_API_URL}/forecast?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}`
     );
-
     Promise.all([currentWeatherFetch, forecastFetch])
       .then(async (response) => {
         const weatherResponse = await response[0].json();
@@ -51,18 +44,17 @@ function App() {
 
         setSearchedWeather({ city: searchData.label, ...weatherResponse });
         setSearchedForecast({ city: searchData.label, ...forcastResponse });
+        setSearchedCity({ city: searchData.label, ...weatherResponse })
       })
       .catch(console.log)
-    console.log(currentWeather)
-    console.log(currentForecast)
+    setShow(false);
   };
-
-
 
   useEffect(() => {
 
     const fetchData = async () => {
       try {
+
         let localLat, localLong;
 
         // Wrap getCurrentPosition() method in a Promise that resolves with location data
@@ -76,21 +68,19 @@ function App() {
         const position = await getPosition();
         localLat = position.coords.latitude;
         localLong = position.coords.longitude;
-
         // Use location data to construct API URL and fetch weather information
         await fetch(`${WEATHER_API_URL}/weather/?lat=${localLat}&lon=${localLong}&APPID=${WEATHER_API_KEY}`)
           .then(res => res.json())
           .then(result => {
             let localWeather = result;
             setCurrentWeather(localWeather);
-            console.log("checking", localWeather);
+            setCurrentCity(localWeather.name);
           });
         await fetch(`${WEATHER_API_URL}/forecast?lat=${localLat}&lon=${localLong}&appid=${WEATHER_API_KEY}`)
           .then(res => res.json())
           .then(result => {
             let localForecast = result;
             setCurrentForecast(localForecast);
-            console.log("checking", localForecast);
           });
       } catch (err) {
         console.log(err)
@@ -101,13 +91,19 @@ function App() {
 
   }, [])
 
+  useEffect(() => {
 
+    fetch(`https://newsapi.org/v2/everything?q=${currentCity}&apiKey=b31433a3fbcc4089a3d505d1ebcec18a`)
+      .then(res => res.json())
+      .then(data => setNews(data.articles))
+  }, [])
 
-  // useEffect(() => {
-  //   fetch(`https://newsapi.org/v2/top-headlines?sources=techcrunch&apiKey=b31433a3fbcc4089a3d505d1ebcec18a`)
-  //     .then(res => res.json())
-  //     .then(data => setItems(data.articles))
-  // }, [category])
+  useEffect(() => {
+
+    fetch(`https://newsapi.org/v2/everything?q=${searchedCity}&apiKey=b31433a3fbcc4089a3d505d1ebcec18a`)
+      .then(res => res.json())
+      .then(data => setSearchedNews(data.articles))
+  }, [])
 
 
   return (
@@ -116,9 +112,25 @@ function App() {
         <Search onSearchChange={handleOnSearchChange} />
       </div>
       <div>
-        {searchedWeather && <CurrentWeather data={searchedWeather} />}
-        {searchedForecast && <Forecast data={searchedForecast} />}
+        {/* {handleOnSearchChange.length > 0 ? (
+        <>
+          <CurrentWeather data={searchedWeather} />
+          <Forecast data={searchedForecast} />
+          <NewsGrid items={searchedNews} />
+        </>
+        ) 
+        :
+        (
+          <>
+            <CurrentWeather data={currentWeather} />
+            <Forecast data={currentForecast} />
+            <NewsGrid items={news} />
+          </>
+        )} */}
+
       </div>
+
+      {/* Shows current location info */}
       {currentWeather && <div className="weather local">
         <div className="top">
           <div>
@@ -128,7 +140,7 @@ function App() {
           <img src={`icons/${currentWeather.weather[0].icon}.png`} alt="" className="weather-icon" />
         </div>
         <div className="bottom">
-          <p className="temperature">{Math.round(currentWeather.main.temp)}°C</p>
+          <p className="temperature">{Math.round((currentWeather.main.temp) - 275)}°C</p>
           <div className="details">
             <div className="parameter-row">
               <span className="parameter-label">Details</span>
@@ -153,7 +165,7 @@ function App() {
         </div>
       </div>}
       <div className="local-forecast">
-        <label className="local-title">Daily</label>
+        <h3 className="local-title">Forecast</h3>
         {currentForecast && <Accordion allowZeroExpanded>
           {currentForecast.list.splice(0, 7).map((item, index) => (
             <AccordionItem key={index}>
@@ -200,9 +212,9 @@ function App() {
           ))}
         </Accordion>}
       </div>
-      <div>
-        <h4>News</h4>
-        <NewsGrid items={items}/>
+      <div className="news-section">
+        <h3 className="news-heading">News</h3>
+        <NewsGrid items={news} />
       </div>
     </div>
   );

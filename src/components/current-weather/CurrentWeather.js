@@ -2,6 +2,7 @@ import React from 'react'
 import '../current-weather/CurrentWeather.css'
 
 const CurrentWeather = ({data}) => {
+    // console.log(data)
     return (
         <div className="weather">
             <div className="top">
@@ -12,7 +13,7 @@ const CurrentWeather = ({data}) => {
                 <img src={`icons/${data.weather[0].icon}.png`} alt="" className="weather-icon" />
             </div>
             <div className="bottom">
-                <p className="temperature">{Math.round(data.main.temp)}°C</p>
+                <p className="temperature">{Math.round((data.main.temp)-275)}°C</p>
                 <div className="details">
                     <div className="parameter-row">
                         <span className="parameter-label">Details</span>
